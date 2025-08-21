@@ -3,7 +3,7 @@ name: Update Snapshots
 on:
   schedule:
     - cron: "0 3 * * *"   # daily 03:00 UTC
-  workflow_dispatch:       # manual run
+  workflow_dispatch:
 
 jobs:
   scrape:
@@ -15,23 +15,26 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: List repo (debug)
-        run: |
-          pwd
-          ls -la
-          echo "--- scripts ---"
-          ls -la scripts || true
-
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: '20'
 
-      - name: Install Playwright
+      - name: Install deps
         run: |
           npm init -y
-          npm install playwright@1.42.0
-          npx playwright install --with-deps chromium
+          npm i playwright@latest
+
+      # This action installs browsers + system deps for the current runner
+      - name: Install Playwright browsers and OS deps
+        uses: microsoft/playwright-github-action@v1
+
+      - name: Debug listing
+        run: |
+          pwd
+          ls -la
+          echo "--- scripts ---"
+          ls -la scripts || true
 
       - name: Run snapshot script
         run: node scripts/snapshots.js
