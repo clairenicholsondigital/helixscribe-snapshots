@@ -8,6 +8,7 @@ on:
 jobs:
   scrape:
     runs-on: ubuntu-latest
+    container: mcr.microsoft.com/playwright:v1.45.0-jammy   # browsers + deps baked in
 
     steps:
       - name: Checkout repo
@@ -15,26 +16,20 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Install deps
+      - name: Verify environment (debug)
         run: |
-          npm init -y
-          npm i playwright@latest
-
-      # This action installs browsers + system deps for the current runner
-      - name: Install Playwright browsers and OS deps
-        uses: microsoft/playwright-github-action@v1
-
-      - name: Debug listing
-        run: |
-          pwd
-          ls -la
+          node -v
+          npm -v
+          playwright --version || true   # comes with the image
+          pwd && ls -la
           echo "--- scripts ---"
           ls -la scripts || true
+
+      # playwright is already installed in the image; this is optional
+      - name: Ensure local package.json (optional)
+        run: |
+          [ -f package.json ] || npm init -y
+          npm i playwright@1.45.0 --save-dev
 
       - name: Run snapshot script
         run: node scripts/snapshots.js
