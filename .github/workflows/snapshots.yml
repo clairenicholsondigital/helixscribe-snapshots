@@ -1,45 +1,30 @@
-const { chromium } = require('playwright');
-const fs = require('fs');
+name: Update Snapshots
 
-(async () => {
-  const browser = await chromium.launch();
-  const page = await browser.newPage();
+on:
+  schedule:
+    - cron: "0 3 * * *"   # run daily at 03:00 UTC
+  workflow_dispatch:       # allow manual run
 
-  // Base routes you always want
-  const routes = [
-    { url: 'https://create.helixscribe.ai/', file: 'index.html' },
-    { url: 'https://create.helixscribe.ai/about', file: 'about.html' },
-    { url: 'https://create.helixscribe.ai/features', file: 'features.html' },
-    { url: 'https://create.helixscribe.ai/pricing', file: 'pricing.html' },
-    { url: 'https://create.helixscribe.ai/blog', file: 'blog.html' }
-  ];
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
 
-  // Step 1: Visit the blog listing page to extract links
-  await page.goto('https://create.helixscribe.ai/blog', { waitUntil: 'networkidle' });
-  const blogLinks = await page.$$eval('a[href^="/blog/"]', els =>
-    els.map(e => e.getAttribute('href'))
-  );
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
 
-  // Step 2: Add blog posts to routes list
-  blogLinks.forEach(link => {
-    // avoid duplicates
-    if (!routes.some(r => r.url.endsWith(link))) {
-      const slug = link.replace('/blog/', '');
-      routes.push({
-        url: `https://create.helixscribe.ai${link}`,
-        file: `blog-${slug}.html`
-      });
-    }
-  });
+      - name: Install Node & Playwright
+        run: |
+          npm init -y
+          npm install playwright@1.42.0
 
-  // Step 3: Visit each route and save snapshot
-  for (const r of routes) {
-    console.log(`Saving snapshot: ${r.url}`);
-    await page.goto(r.url, { waitUntil: 'networkidle' });
-    const html = await page.content();
-    fs.mkdirSync('snapshots', { recursive: true });
-    fs.writeFileSync(`snapshots/${r.file}`, html);
-  }
+      - name: Run snapshot script
+        run: node scripts/snapshot.js
 
-  await browser.close();
-})();
+      - name: Commit changes
+        run: |
+          git config --global user.name "github-actions"
+          git config --global user.email "actions@github.com"
+          git add snapshots/*.html
+          git commit -m "Update snapshots" || echo "No changes to commit"
+          git push
