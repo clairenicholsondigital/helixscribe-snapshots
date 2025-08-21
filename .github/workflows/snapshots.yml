@@ -19,7 +19,7 @@ jobs:
           npm install playwright@1.42.0
 
       - name: Run snapshot script
-        run: node scripts/snapshot.js
+        run: node scripts/snapshots.js
 
       - name: Commit changes
         run: |
