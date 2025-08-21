@@ -1,13 +1,46 @@
-- name: Setup Node
-  uses: actions/setup-node@v4
-  with:
-    node-version: '20'
+name: Update Snapshots
 
-- name: Install Playwright
-  run: |
-    npm init -y
-    npm install playwright@1.42.0
-    npx playwright install --with-deps chromium
+on:
+  schedule:
+    - cron: "0 3 * * *"   # daily 03:00 UTC
+  workflow_dispatch:       # manual run
 
-- name: Run snapshot script
-  run: node scripts/snapshots.js
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: List repo (debug)
+        run: |
+          pwd
+          ls -la
+          echo "--- scripts ---"
+          ls -la scripts || true
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Playwright
+        run: |
+          npm init -y
+          npm install playwright@1.42.0
+          npx playwright install --with-deps chromium
+
+      - name: Run snapshot script
+        run: node scripts/snapshots.js
+
+      - name: Commit changes (if any)
+        run: |
+          git config --global user.name "github-actions"
+          git config --global user.email "actions@github.com"
+          mkdir -p snapshots
+          git add snapshots/*.html 2>/dev/null || true
+          git commit -m "Update snapshots" || echo "No changes to commit"
+          git push || echo "No push (detached or no changes)"
